@@ -1,0 +1,25 @@
+{
+"Background":
+{ "color": "#ff00bf", "index": 8 }
+,
+"Pedestrian":
+{ "color": "#8000ff", "index": 7 }
+,
+"Bike":
+{ "color": "#0040ff", "index": 6 }
+,
+"Vehicle":
+{ "color": "#00ffff", "index": 5 }
+,
+"Debris":
+{ "color": "#00ff40", "index": 4 }
+,
+"Obstacle":
+{ "color": "#80ff00", "index": 3 }
+,
+"Road Marking":
+{ "color": "#ffbf00", "index": 2 }
+,
+"Road":
+{ "color": "#ff0000", "index": 1 }
+}
