@@ -2,10 +2,10 @@ import os
 import math
 
 # number of GPUs available
-numGpus = 8
+numGpus = 2
 
 # number of image pairs to process
-numImgs = 60
+numImgs = 1
 
 N = int(math.ceil(float(numImgs)/numGpus))
 for j in range(1, numGpus + 1):

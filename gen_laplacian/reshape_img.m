@@ -1,3 +1,5 @@
+pkg load image
+
 function out = reshape_img(in, len)
     if nargin < 2
         len = 512;
@@ -13,4 +15,4 @@ function out = reshape_img(in, len)
     end 
     
     out = imresize(in, [h2 w2]);
-end 
+endfunction
