@@ -55,6 +55,8 @@ cmd:option('-seed', 612)
 cmd:option('-content_layers', 'relu4_2', 'layers for content')
 cmd:option('-style_layers',   'relu1_1,relu2_1,relu3_1,relu4_1,relu5_1', 'layers for style')
 
+cmd:option('-csr', '', 'Laplacian matt')
+
 
 local function main(params)
   cutorch.setDevice(params.gpu + 1)
@@ -90,7 +92,7 @@ local function main(params)
   content_seg = image.scale(content_seg, w, h, 'bilinear')
   local style_seg = image.load(params.style_seg, 3)
   style_seg = image.scale(style_seg, w2, h2, 'bilinear')
-  local color_codes = {'blue', 'green', 'black', 'white', 'red', 'yellow', 'grey', 'lightblue', 'purple'}
+  local color_codes = {'Background', 'Pedestrian', 'Bike', 'Vehicle', 'Debris', 'Obstacle', 'Road Marking', 'Road'}
   local color_content_masks, color_style_masks = {}, {}
   for j = 1, #color_codes do
     local content_mask_j = ExtractMask(content_seg, color_codes[j])
@@ -99,6 +101,8 @@ local function main(params)
     table.insert(color_style_masks, style_mask_j)
   end 
   --]]
+
+  local CSR_fn = params.csr
 
   -- Set up the network, inserting style and content loss modules
   local content_losses, style_losses = {}, {}
@@ -114,7 +118,7 @@ local function main(params)
   local cnn = loadcaffe.load(params.proto_file, params.model_file, params.backend):float():cuda()
 
   -- load matting laplacian
-  local CSR_fn = 'gen_laplacian/Input_Laplacian_'..tostring(params.patch)..'x'..tostring(params.patch)..'_1e-7_CSR' .. tostring(index) .. '.mat'
+  -- local CSR_fn = 'gen_laplacian/Input_Laplacian_'..tostring(params.patch)..'x'..tostring(params.patch)..'_1e-7_CSR' .. tostring(index) .. '.mat'
   print('loading matting laplacian...', CSR_fn)
   local CSR = matio.load(CSR_fn).CSR:cuda()
 
@@ -447,44 +451,40 @@ end
 
 function ExtractMask(seg, color)
   local mask = nil
-  if color == 'green' then 
-  	mask = torch.lt(seg[1], 0.1)
-  	mask:cmul(torch.gt(seg[2], 1-0.1))
-  	mask:cmul(torch.lt(seg[3], 0.1))
-  elseif color == 'black' then 
-  	mask = torch.lt(seg[1], 0.1)
-  	mask:cmul(torch.lt(seg[2], 0.1))
-  	mask:cmul(torch.lt(seg[3], 0.1))
-  elseif color == 'white' then
-  	mask = torch.gt(seg[1], 1-0.1)
-  	mask:cmul(torch.gt(seg[2], 1-0.1))
-  	mask:cmul(torch.gt(seg[3], 1-0.1))
-  elseif color == 'red' then 
-    mask = torch.gt(seg[1], 1-0.1)
+  if color == 'Background' then
+    mask = torch.gt(seg[1], 0.9)
+    mask:cmul(torch.lt(seg[2], 0.1))
+    mask:cmul(torch.lt(seg[3], 0.8), torch.gt(seg[3], 0.7))
+  elseif color == 'Pedestrian' then
+    mask = torch.cmul(torch.gt(seg[1], 0.4), torch.lt(seg[1], 0.6))
+    mask:cmul(torch.lt(seg[2], 0.1))
+    mask:cmul(torch.gt(seg[3], 0.9))
+  elseif color == 'Bike' then
+    mask = torch.lt(seg[1], 0.1)
+    mask:cmul(torch.lt(seg[2], 0.3), torch.gt(seg[2], 0.2))
+    mask:cmul(torch.gt(seg[3], 0.9))
+  elseif color == 'Vehicle' then
+    mask = torch.lt(seg[1], 0.1)
+    mask:cmul(torch.gt(seg[2], 0.9))
+    mask:cmul(torch.gt(seg[3], 0.9))
+  elseif color == 'Debris' then
+    mask = torch.lt(seg[1], 0.1)
+    mask:cmul(torch.gt(seg[2], 0.9))
+    mask:cmul(torch.lt(seg[3], 0.3), torch.gt(seg[3], 0.2))
+  elseif color == 'Obstacle' then
+    mask = torch.cmul(torch.gt(seg[1], 0.4), torch.lt(seg[1], 0.6))
+    mask:cmul(torch.gt(seg[2], 0.9))
+    mask:cmul(torch.lt(seg[3], 0.1))
+  elseif color == 'Road Marking' then
+    mask = torch.gt(seg[1], 0.9)
+    mask:cmul(torch.lt(seg[2], 0.8), torch.gt(seg[2], 0.7))
+    mask:cmul(torch.lt(seg[3], 0.1))
+  elseif color == 'Road' then
+    mask = torch.gt(seg[1], 0.9)
     mask:cmul(torch.lt(seg[2], 0.1))
     mask:cmul(torch.lt(seg[3], 0.1))
-  elseif color == 'blue' then
-    mask = torch.lt(seg[1], 0.1)
-    mask:cmul(torch.lt(seg[2], 0.1))
-    mask:cmul(torch.gt(seg[3], 1-0.1))
-  elseif color == 'yellow' then
-    mask = torch.gt(seg[1], 1-0.1)
-    mask:cmul(torch.gt(seg[2], 1-0.1))
-    mask:cmul(torch.lt(seg[3], 0.1))
-  elseif color == 'grey' then 
-    mask = torch.cmul(torch.gt(seg[1], 0.5-0.1), torch.lt(seg[1], 0.5+0.1))
-    mask:cmul(torch.cmul(torch.gt(seg[2], 0.5-0.1), torch.lt(seg[2], 0.5+0.1)))
-    mask:cmul(torch.cmul(torch.gt(seg[3], 0.5-0.1), torch.lt(seg[3], 0.5+0.1)))
-  elseif color == 'lightblue' then
-    mask = torch.lt(seg[1], 0.1)
-    mask:cmul(torch.gt(seg[2], 1-0.1))
-    mask:cmul(torch.gt(seg[3], 1-0.1))
-  elseif color == 'purple' then 
-    mask = torch.gt(seg[1], 1-0.1)
-    mask:cmul(torch.lt(seg[2], 0.1))
-    mask:cmul(torch.gt(seg[3], 1-0.1))
   else 
-  	print('ExtractMask(): color not recognized, color = ', color)
+    print('ExtractMask(): color not recognized, color = ', color)
   end 
   return mask:float()
 end

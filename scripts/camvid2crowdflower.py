@@ -47,7 +47,7 @@ with open('/home/jpu/hackweek/camvid-labels.txt') as f:
         camvidColorMap[tokens[3]] = color
 
 import json
-with open('/home/jpu/hackweek/crowdflower.txt') as f:
+with open('./crowdflower.txt') as f:
     data = json.load(f)
 
 crowdflowerColorMap = dict()
